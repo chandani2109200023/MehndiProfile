@@ -220,7 +220,7 @@ const resetPassword = async (req, res) => {
 
 // Register User
 const registerUser = async (req, res) => {
-  const { name, email, password, phone, bankDetails } = req.body;
+  const { name, email, password, phone} = req.body;
 
   try {
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
@@ -228,7 +228,7 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email or phone already in use' });
     }
 
-    const user = new User({ name, email, password, phone, bankDetails });
+    const user = new User({ name, email, password, phone });
     await user.save();
 
     res.status(201).json({

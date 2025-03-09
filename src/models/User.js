@@ -28,24 +28,6 @@ const userSchema = new mongoose.Schema({
     unique: true,
     match: [/^\d{10}$/, 'Please provide a valid 10-digit phone number'],
   },
-  bankDetails: {
-    accountHolderName: {
-      type: String,
-      required: [true, 'Account holder name is required'],
-    },
-    accountNumber: {
-      type: String,
-      required: [true, 'Account number is required'],
-    },
-    ifscCode: {
-      type: String,
-      required: [true, 'IFSC code is required'],
-    },
-    bankName: {
-      type: String,
-      required: [true, 'Bank name is required'],
-    },
-  },
   createdAt: {
     type: Date,
     default: Date.now,

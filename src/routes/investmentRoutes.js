@@ -4,11 +4,13 @@ const {
   getAllInvestments,
   getInvestmentById,
   invest,
-  closeInvestment,
   updateInvestment,
-  deleteInvestment,
   approveInvestment,
-  rejectInvestment
+  rejectInvestment,
+  updateInvestorProfit,
+  approveWithdrawal,
+  rejectWithdrawal,
+  requestWithdrawal
 } = require('../controllers/investController');
 const authAdmin = require('../middleware/authAdmin');
 const authUser = require('../middleware/auth'); // Middleware for authenticated users
@@ -28,6 +30,11 @@ router.get('/:id', getInvestmentById);
 router.post('/invest', authUser, invest);
 router.get('/approve/:approvalId', approveInvestment);
 router.get('/reject/:approvalId', rejectInvestment);
-router.put('/:id',authAdmin,updateInvestment)
+router.put('/:id',authAdmin,updateInvestment);
+router.patch('/:id',authAdmin,updateInvestment);
+router.patch("/:investmentId/investor/:investorId",authAdmin, updateInvestorProfit);
+router.post('/withdraw',authUser,requestWithdrawal);
+router.get('/withdraw/:withdrawId',approveWithdrawal);
+router.get('/reject/:withdrawId',rejectWithdrawal);
 
 module.exports = router;

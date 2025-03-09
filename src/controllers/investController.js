@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
 const pendingInvestments = new Map();
+const pendingWithdrawals = new Map();
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -13,19 +14,38 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendApprovalEmail = (adminEmail, investmentId, userId, amount) => {
+const sendApprovalEmail = (adminEmail, user, investment, amount) => {
     const approvalId = uuidv4();
-    pendingInvestments.set(approvalId, { investmentId, userId, amount});
-    
-    const approveLink = `http://192.168.101.183:8000/investment/approve/${approvalId}`;
-    const rejectLink = `http://192.168.101.183:8000/investments/reject/${approvalId}`;
-    
+    pendingInvestments.set(approvalId, { investmentId: investment.id, userId: user.id, amount });
+
+    const approveLink = `http://192.168.0.105:8000/investment/approve/${approvalId}`;
+    const rejectLink = `http://192.168.0.105:8000/investment/reject/${approvalId}`;
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: "chandanikumari21092000@gmail.com",
-        subject: 'New Investment Request',
-        html: `<p>User <strong>${userId}</strong> wants to invest <strong>${amount}</strong> in investment <strong>${investmentId}</strong>.</p>
-               <p><a href="${approveLink}">Approve</a> | <a href="${rejectLink}">Reject</a></p>`
+        subject: 'New Investment Request Approval Needed',
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
+            <h2 style="color: #333;">Investment Approval Request</h2>
+            <p style="font-size: 16px;">Dear Admin,</p>
+            <p style="font-size: 14px;">You have received a new investment request.</p>
+            
+            <h3 style="color: #007bff;">User Details</h3>
+            <p><strong>Name:</strong> ${user.name}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Contact:</strong> ${user.phone}</p>
+
+            <h3 style="color: #28a745;">Investment Details</h3>
+            <p><strong>Investment Name:</strong> ${investment.name}</p>
+            <p><strong>Investment ID:</strong> ${investment.id}</p>
+            <p><strong>Amount:</strong> $${amount}</p>
+
+            <p style="font-size: 14px;">Please review and take action:</p>
+            <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
+            <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
+        </div>
+        `
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -34,6 +54,210 @@ const sendApprovalEmail = (adminEmail, investmentId, userId, amount) => {
     });
 };
 
+// Send Withdrawal Request Email
+const sendWithdrawalEmail = (adminEmail, user, investment, amount) => {
+    const withdrawId = uuidv4();
+    pendingWithdrawals.set(withdrawId, { investmentId: investment.id, userId: user.id, amount });
+
+    const approveLink = `http://192.168.0.105:8000/investment/withdraw/approve/${withdrawId}`;
+    const rejectLink = `http://192.168.0.105:8000/investment/withdraw/reject/${withdrawId}`;
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: "chandanikumari21092000@gmail.com",
+        subject: 'New Withdrawal Request Approval Needed',
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
+            <h2 style="color: #333;">Withdrawal Request Approval</h2>
+            <p style="font-size: 16px;">Dear Admin,</p>
+            <p style="font-size: 14px;">A user has requested a withdrawal.</p>
+            
+            <h3 style="color: #007bff;">User Details</h3>
+            <p><strong>Name:</strong> ${user.name}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Contact:</strong> ${user.phone}</p>
+
+            <h3 style="color: #dc3545;">Withdrawal Details</h3>
+            <p><strong>Investment Name:</strong> ${investment.name}</p>
+            <p><strong>Investment ID:</strong> ${investment.id}</p>
+            <p><strong>Withdrawal Amount:</strong> $${amount}</p>
+
+            <p style="font-size: 14px;">Please review and take action:</p>
+            <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
+            <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
+        </div>
+        `
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) console.error('Error sending email:', error);
+        else console.log('Withdrawal email sent:', info.response);
+    });
+};
+
+// Approve Withdrawal
+const approveWithdrawal = async (req, res) => {
+    try {
+        const { withdrawId } = req.params;
+        const pending = pendingWithdrawals.get(withdrawId);
+        if (!pending) return res.status(404).json({ error: 'Withdrawal request not found' });
+
+        const { investmentId, userId, amount } = pending;
+        const investment = await Investment.findById(investmentId);
+        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+
+        const investorIndex = investment.investors.findIndex(i => i.userId.toString() === userId);
+        if (investorIndex === -1) return res.status(404).json({ error: 'Investor not found' });
+
+        const investor = investment.investors[investorIndex];
+
+        if (amount >= investor.amount) {
+            // If withdrawing the full amount, remove investor from list
+            investment.investors.splice(investorIndex, 1);
+        } else {
+            // Deduct the withdrawn amount
+            investor.amount -= amount;
+        }
+
+        investment.totalInvestment -= amount;
+        await investment.save();
+        pendingWithdrawals.delete(withdrawId);
+
+        res.status(200).json({ message: 'Withdrawal approved successfully' });
+    } catch (err) {
+        console.error('Error approving withdrawal:', err);
+        res.status(500).json({ error: 'Unable to approve withdrawal' });
+    }
+};
+
+// Reject Withdrawal
+const rejectWithdrawal = async (req, res) => {
+    try {
+        const { withdrawId } = req.params;
+        if (!pendingWithdrawals.has(withdrawId)) {
+            return res.status(404).json({ error: 'Withdrawal request not found' });
+        }
+        pendingWithdrawals.delete(withdrawId);
+        res.status(200).json({ message: 'Withdrawal request rejected' });
+    } catch (err) {
+        console.error('Error rejecting withdrawal:', err);
+        res.status(500).json({ error: 'Unable to reject withdrawal' });
+    }
+};
+
+// Handle Withdrawal Request
+const requestWithdrawal = async (req, res) => {
+    try {
+        const { investmentId, userId, amount } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(investmentId) || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: 'Invalid IDs provided' });
+        }
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ error: 'Withdrawal amount must be greater than 0' });
+        }
+
+        const investment = await Investment.findById(investmentId);
+        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+
+        const investor = investment.investors.find(i => i.userId.toString() === userId);
+        if (!investor) return res.status(404).json({ error: 'Investor not found in this investment' });
+
+        if (amount > investor.amount) {
+            return res.status(400).json({ error: 'Withdrawal amount exceeds invested amount' });
+        }
+
+        sendWithdrawalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
+        res.status(200).json({ message: 'Withdrawal request sent for approval' });
+    } catch (err) {
+        console.error('Error processing withdrawal request:', err);
+        res.status(500).json({ error: 'Unable to process withdrawal request' });
+    }
+};
+const updateInvestorProfit = async (req, res) => {
+    try {
+        const { investmentId, investorId } = req.params;
+        const { profit } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(investmentId) || !mongoose.Types.ObjectId.isValid(investorId)) {
+            return res.status(400).json({ error: 'Invalid Investment ID or Investor ID' });
+        }
+        if (profit === undefined || profit < 0) {
+            return res.status(400).json({ error: 'Invalid profit percentage' });
+        }
+
+        const investment = await Investment.findById(investmentId);
+        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+
+        console.log("Investment Investors:", investment.investors); // Debugging
+
+        // Try matching using investor's `_id` instead of `userId`
+        const investor = investment.investors.find(inv => inv._id.toString() === investorId);
+
+        if (!investor) return res.status(404).json({ error: 'Investor not found in this investment' });
+
+        // Update the profit percentage
+        investor.profit = profit;
+
+        await investment.save();
+        res.status(200).json({ message: 'Investor profit updated successfully', investment });
+    } catch (err) {
+        console.error('Error updating investor profit:', err);
+        res.status(500).json({ error: 'Unable to update investor profit' });
+    }
+};
+
+// Create new investment
+const createInvestment = async (req, res) => {
+    try {
+        const {
+            material,
+            description,
+            minInvestment,
+            expectedProfit,
+            costPrice,
+            costQuantity,
+        } = req.body;
+
+        const investment = new Investment({
+            material,
+            description: description || "",
+            minInvestment,
+            expectedProfit,
+            totalInvestment: 0,
+            costPrice,
+            costQuantity,
+            sellingPrice: 0,
+            sellingQuantity: 0,
+            investors: [],
+            status: 'open',
+        });
+
+        const savedInvestment = await investment.save();
+        res.status(201).json(savedInvestment);
+    } catch (err) {
+        console.error('Error creating investment:', err);
+        res.status(500).json({ error: 'Unable to create investment' });
+    }
+};
+
+// Fetch all investments
+const getAllInvestments = async (req, res) => {
+    try {
+        const investments = await Investment.find().populate('investors.userId', 'name email');
+
+        if (!investments || investments.length === 0) {
+            return res.status(404).json({ error: 'No investments found' });
+        }
+
+        res.status(200).json(investments);
+    } catch (err) {
+        console.error('Error fetching investments:', err);
+        res.status(500).json({ error: 'Unable to fetch investments' });
+    }
+};
+
+// Handle investment request
 const invest = async (req, res) => {
     try {
         const { investmentId, userId, amount } = req.body;
@@ -57,25 +281,26 @@ const invest = async (req, res) => {
     }
 };
 
+// Approve investment
 const approveInvestment = async (req, res) => {
     try {
         const { approvalId } = req.params;
         const pending = pendingInvestments.get(approvalId);
         if (!pending) return res.status(404).json({ error: 'Approval request not found' });
 
-        const { investmentId, userId, amount } = pending; // Removed quantity
+        const { investmentId, userId, amount } = pending;
         const investment = await Investment.findById(investmentId);
         if (!investment) return res.status(404).json({ error: 'Investment not found' });
 
         // Check if the user is already an investor
         const existingInvestor = investment.investors.find(i => i.userId.toString() === userId);
         if (existingInvestor) {
-            existingInvestor.amount += amount; // Only updating amount
+            existingInvestor.amount += amount;
         } else {
-            investment.investors.push({ userId, amount }); // Storing only amount
+            investment.investors.push({ userId, amount, profit: investment.expectedProfit });
         }
 
-        investment.totalInvestment += amount; // Updating total investment
+        investment.totalInvestment += amount;
 
         await investment.save();
         pendingInvestments.delete(approvalId);
@@ -87,6 +312,7 @@ const approveInvestment = async (req, res) => {
     }
 };
 
+// Reject investment
 const rejectInvestment = async (req, res) => {
     try {
         const { approvalId } = req.params;
@@ -101,61 +327,64 @@ const rejectInvestment = async (req, res) => {
     }
 };
 
-const getAllInvestments = async (req, res) => {
-    try {
-        console.log("Fetching all investments...");
-  
-        const investments = await Investment.find().populate('investors.userId', 'name email'); // Fetch user details
-  
-        console.log("Fetched investments with user details:", investments);
-  
-        if (!investments || investments.length === 0) {
-            return res.status(404).json({ error: 'No investments found' });
-        }
-  
-        res.status(200).json(investments);
-    } catch (err) {
-        console.error('Error fetching investments:', err);
-        res.status(500).json({ error: 'Unable to fetch investments' });
-    }
-  };
+// Update investment
 const updateInvestment = async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: 'Invalid Investment ID' });
+            return res.status(400).json({ error: "Invalid Investment ID" });
         }
 
-        const investment = await Investment.findByIdAndUpdate(id, updates, { new: true });
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+        const investment = await Investment.findById(id);
+        if (!investment) {
+            return res.status(404).json({ error: "Investment not found" });
+        }
 
-        res.status(200).json(investment);
-    } catch (err) {
-        console.error('Error updating investment:', err);
-        res.status(500).json({ error: 'Unable to update investment' });
-    }
-};
+        // Update sellingPrice and sellingQuantity if provided
+        if (updates.sellingPrice !== undefined) {
+            investment.sellingPrice = updates.sellingPrice;
+        }
+        if (updates.sellingQuantity !== undefined) {
+            investment.sellingQuantity = updates.sellingQuantity;
+        }
 
-const createInvestment = async (req, res) => {
-    try {
-        const { material, description, minInvestment, expectedProfit, quantity } = req.body;
-        const investment = new Investment({
-            material,
-            description: description || "",
-            minInvestment,
-            expectedProfit,
-            totalInvestment: 0,
-            quantity,
-            investors: [],
-            status: 'open',
+        // Update costPrice and costQuantity if provided
+        if (updates.costPrice !== undefined) {
+            investment.costPrice = updates.costPrice;
+        }
+        if (updates.costQuantity !== undefined) {
+            investment.costQuantity = updates.costQuantity;
+        }
+
+        // Calculate cost per unit only if costQuantity is greater than zero
+        let costPerUnit = 0;
+        if (investment.costQuantity > 0) {
+            costPerUnit = investment.costPrice / investment.costQuantity;
+        }
+
+        // Ensure sellingQuantity is not greater than available costQuantity
+        if (investment.sellingQuantity > investment.costQuantity) {
+            return res.status(400).json({ error: "Selling quantity cannot exceed available cost quantity" });
+        }
+
+        // Reduce costPrice and costQuantity based on sellingQuantity
+        investment.costPrice -= costPerUnit * investment.sellingQuantity;
+        investment.costQuantity -= investment.sellingQuantity;
+
+        // Update profit for investors
+        investment.investors.forEach(investor => {
+            const newProfit = ((investment.sellingPrice - costPerUnit * investment.sellingQuantity) * investor.profit) / 100;
+            investor.profitAmount += newProfit;
         });
-        const savedInvestment = await investment.save();
-        res.status(201).json(savedInvestment);
+
+        await investment.save(); // Save the updated investment
+
+        res.status(200).json({ message: "Investment updated successfully", investment });
     } catch (err) {
-        console.error('Error creating investment:', err);
-        res.status(500).json({ error: 'Unable to create investment' });
+        console.error("Error updating investment:", err);
+        res.status(500).json({ error: "Unable to update investment" });
     }
 };
 
@@ -166,5 +395,9 @@ module.exports = {
     invest,
     updateInvestment,
     approveInvestment,
-    rejectInvestment
+    rejectInvestment,
+    updateInvestorProfit,
+    approveWithdrawal,
+    rejectWithdrawal,
+    requestWithdrawal
 };

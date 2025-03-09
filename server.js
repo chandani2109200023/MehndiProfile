@@ -4,7 +4,7 @@ require('dotenv').config();
 const adminRoutes = require('./src/routes/adminRoutes.js');
 const authRoutes = require('./src/routes/authRoute.js');
 const userRoutes = require('./src/routes/userRoutes.js');
-const addressRoutes = require('./src/routes/addressRoutes.js');
+const documentRoute = require('./src/routes/documentRoutes.js');
 const investmentRoutes = require('./src/routes/investmentRoutes.js')
 
 const app = express();
@@ -16,7 +16,7 @@ app.use('/investment',investmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/address', addressRoutes);
+app.use('/document', documentRoute);
 
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 30000,
