@@ -39,7 +39,7 @@ const sendApprovalEmail = async (adminEmail, investmentId, userId, amount) => {
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
-            to: adminEmail, // Use dynamic admin email
+            to: "chandanikumari21092000@gmail.com", // Use dynamic admin email
             subject: 'New Investment Request Approval Needed',
             html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
