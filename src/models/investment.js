@@ -16,7 +16,8 @@ const InvestmentSchema = new mongoose.Schema(
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         amount: { type: Number, required: true, min: 0 },
         profit: { type: Number, min: 0 }, // Default profit set to 0
-        profitAmount: { type: Number, default: 0, min: 0 }
+        profitAmount: { type: Number, default: 0, min: 0 },
+        totalAmount: { type: Number, default: 0 }, // Field to store totalAmount
       }
     ],
     status: { type: String, enum: ["open", "closed"], default: "open" },
@@ -24,15 +25,21 @@ const InvestmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Pre-save middleware to update investors and remove zero amounts
 InvestmentSchema.pre("save", function (next) {
+  // Iterate over the investors and perform necessary actions
+  this.investors = this.investors.filter(investor => investor.amount > 0); // Remove investors with amount 0
+
   this.investors.forEach(investor => {
+    // Set profit to expectedProfit if it is not already set
     if (investor.profit === undefined || investor.profit === null) {
-      investor.profit = this.expectedProfit; // Set only if not already set
+      investor.profit = this.expectedProfit;
     }
+    // Calculate totalAmount for each investor
+    investor.totalAmount = investor.amount + investor.profitAmount;
   });
+
   next();
 });
-
-
 
 module.exports = mongoose.model("Investment", InvestmentSchema);
