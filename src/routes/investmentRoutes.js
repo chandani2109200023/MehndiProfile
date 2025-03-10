@@ -27,7 +27,7 @@ router.get('/', getAllInvestments);
 router.get('/:id', getInvestmentById);
 
 // 🔹 Invest in an opportunity (Authenticated Partners)
-router.post('/invest', authUser, invest);
+router.post('/invest', authAdmin, invest);
 router.get('/approve/:approvalId', approveInvestment);
 router.get('/reject/:approvalId', rejectInvestment);
 router.put('/:id',authAdmin,updateInvestment);
