@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Investment = require('../models/investment');
+const User = require('../models/User'); // Adjust path based on your project structure
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 
