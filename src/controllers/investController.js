@@ -14,59 +14,89 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendApprovalEmail = (adminEmail, user, investment, amount) => {
-    const approvalId = uuidv4();
-    pendingInvestments.set(approvalId, { investmentId: investment.id, userId: user.id, amount });
+const sendApprovalEmail = async (adminEmail, investmentId, userId, amount) => {
+    try {
+        // Fetch user details
+        const user = await User.findById(userId);
+        if (!user) {
+            console.error('User not found');
+            return;
+        }
 
-    const approveLink = `https://mehndiprofile.onrender.com/investment/approve/${approvalId}`;
-    const rejectLink = `https://mehndiprofile.onrender.com/investment/reject/${approvalId}`;
+        // Fetch investment details
+        const investment = await Investment.findById(investmentId);
+        if (!investment) {
+            console.error('Investment not found');
+            return;
+        }
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: "chandanikumari21092000@gmail.com",
-        subject: 'New Investment Request Approval Needed',
-        html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
-            <h2 style="color: #333;">Investment Approval Request</h2>
-            <p style="font-size: 16px;">Dear Admin,</p>
-            <p style="font-size: 14px;">You have received a new investment request.</p>
-            
-            <h3 style="color: #007bff;">User Details</h3>
-            <p><strong>Name:</strong> ${user.name}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Contact:</strong> ${user.phone}</p>
+        const approvalId = uuidv4();
+        pendingInvestments.set(approvalId, { investmentId, userId, amount });
 
-            <h3 style="color: #28a745;">Investment Details</h3>
-            <p><strong>Investment Name:</strong> ${investment.name}</p>
-            <p><strong>Investment ID:</strong> ${investment.id}</p>
-            <p><strong>Amount:</strong> $${amount}</p>
+        const approveLink = `https://mehndiprofile.onrender.com/investment/approve/${approvalId}`;
+        const rejectLink = `https://mehndiprofile.onrender.com/investment/reject/${approvalId}`;
 
-            <p style="font-size: 14px;">Please review and take action:</p>
-            <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
-            <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
-        </div>
-        `
-    };
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: adminEmail, // Use dynamic admin email
+            subject: 'New Investment Request Approval Needed',
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
+                <h2 style="color: #333;">Investment Approval Request</h2>
+                <p style="font-size: 16px;">Dear Admin,</p>
+                <p style="font-size: 14px;">You have received a new investment request.</p>
+                
+                <h3 style="color: #007bff;">User Details</h3>
+                <p><strong>Name:</strong> ${user.name}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Contact:</strong> ${user.phone}</p>
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) console.error('Error sending email:', error);
-        else console.log('Approval email sent:', info.response);
-    });
+                <h3 style="color: #28a745;">Investment Details</h3>
+                <p><strong>Investment Name:</strong> ${investment.name}</p>
+                <p><strong>Investment ID:</strong> ${investment.id}</p>
+                <p><strong>Amount:</strong> $${amount}</p>
+
+                <p style="font-size: 14px;">Please review and take action:</p>
+                <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
+                <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
+            </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Approval email sent:', info.response);
+    } catch (error) {
+        console.error('Error sending approval email:', error);
+    }
 };
 
 // Send Withdrawal Request Email
-const sendWithdrawalEmail = (adminEmail, user, investment, amount) => {
-    const withdrawId = uuidv4();
-    pendingWithdrawals.set(withdrawId, { investmentId: investment.id, userId: user.id, amount });
+const sendWithdrawalEmail = async (adminEmail, investmentId, userId, amount) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            console.error('User not found');
+            return;
+        }
 
-    const approveLink = `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}`;
-    const rejectLink = `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}`;
+        // Fetch investment details
+        const investment = await Investment.findById(investmentId);
+        if (!investment) {
+            console.error('Investment not found');
+            return;
+        }
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: "chandanikumari21092000@gmail.com",
-        subject: 'New Withdrawal Request Approval Needed',
-        html: `
+        const withdrawId = uuidv4();
+        pendingWithdrawals.set(withdrawId, { investmentId: investment.id, userId: user.id, amount });
+
+        const approveLink = `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}`;
+        const rejectLink = `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}`;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: "chandanikumari21092000@gmail.com",
+            subject: 'New Withdrawal Request Approval Needed',
+            html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
             <h2 style="color: #333;">Withdrawal Request Approval</h2>
             <p style="font-size: 16px;">Dear Admin,</p>
@@ -87,12 +117,13 @@ const sendWithdrawalEmail = (adminEmail, user, investment, amount) => {
             <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
         </div>
         `
-    };
+        };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) console.error('Error sending email:', error);
-        else console.log('Withdrawal email sent:', info.response);
-    });
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Approval email sent:', info.response);
+    } catch (error) {
+        console.error('Error sending approval email:', error);
+    }
 };
 
 // Approve Withdrawal
