@@ -180,8 +180,7 @@ const verifyOtp = async (req, res) => {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ message: 'Failed to verify OTP' });
   }
-}; 
-const resetPassword = async (req, res) => {
+}; const resetPassword = async (req, res) => {
   const { email, password, otp } = req.body; // Include OTP in the request body
 
   try {
@@ -220,7 +219,7 @@ const resetPassword = async (req, res) => {
 
 // Register User
 const registerUser = async (req, res) => {
-  const { name, email, password, phone} = req.body;
+  const { name, email, password, phone } = req.body;
 
   try {
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
@@ -231,18 +230,14 @@ const registerUser = async (req, res) => {
     const user = new User({ name, email, password, phone });
     await user.save();
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      user,
-    });
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Error registering user:', error);
-    res.status(500).json({
-      message: 'Failed to register user',
-      error: error.message,
-    });
+    res.status(500).json({ message: 'Failed to register user' });
   }
 };
+
+// Login User
 const loginUser = async (req, res) => {
   const { email, phone, password } = req.body;
   try {
