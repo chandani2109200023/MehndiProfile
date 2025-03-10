@@ -17,7 +17,7 @@ const InvestmentSchema = new mongoose.Schema(
         amount: { type: Number, required: true, min: 0 },
         profit: { type: Number, min: 0 }, // Default profit set to 0
         profitAmount: { type: Number, default: 0, min: 0 },
-        totalAmount: { type: Number, default: 0 }, // Field to store totalAmount
+        totalAmount: { type: Number, default: amount+profitAmount }, // Field to store totalAmount
       }
     ],
     status: { type: String, enum: ["open", "closed"], default: "open" },
@@ -39,30 +39,6 @@ InvestmentSchema.pre("save", function (next) {
     investor.totalAmount = investor.amount + investor.profitAmount;
   });
 
-  next();
-});
-
-// Pre-update middleware to update totalAmount of investors
-InvestmentSchema.pre('findOneAndUpdate', async function(next) {
-  const update = this.getUpdate();
-  const investment = await this.model.findOne(this.getQuery());
-
-  if (investment) {
-    const updatedInvestors = investment.investors.map(investor => {
-      if (update.$set && update.$set['investors.$[elem]']) {
-        const investorData = update.$set['investors.$[elem]'];
-        if (investor.userId.toString() === investorData.userId.toString()) {
-          // Update totalAmount based on the new amount or profitAmount
-          investor.totalAmount = investorData.amount + investorData.profitAmount;
-        }
-      }
-      return investor;
-    });
-
-    // Update the investors in the investment document
-    investment.investors = updatedInvestors;
-    await investment.save();
-  }
   next();
 });
 
