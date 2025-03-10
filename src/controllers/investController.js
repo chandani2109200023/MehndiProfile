@@ -269,18 +269,11 @@ const invest = async (req, res) => {
             return res.status(400).json({ error: 'Investment amount must be greater than 0' });
         }
 
-        // Fetch the complete investment details
         const investment = await Investment.findById(investmentId);
         if (!investment) return res.status(404).json({ error: 'Investment not found' });
         if (investment.status !== 'open') return res.status(400).json({ error: 'This investment opportunity is closed' });
 
-        // Fetch the complete user details
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        // Now send the actual user and investment objects
-        sendApprovalEmail(process.env.ADMIN_EMAIL, user, investment, amount);
-
+        sendApprovalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
         res.status(200).json({ message: 'Investment request sent for approval' });
     } catch (err) {
         console.error('Error processing investment request:', err);
