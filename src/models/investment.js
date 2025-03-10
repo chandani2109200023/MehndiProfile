@@ -42,4 +42,28 @@ InvestmentSchema.pre("save", function (next) {
   next();
 });
 
+// Pre-update middleware to update totalAmount of investors
+InvestmentSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  const investment = await this.model.findOne(this.getQuery());
+
+  if (investment) {
+    const updatedInvestors = investment.investors.map(investor => {
+      if (update.$set && update.$set['investors.$[elem]']) {
+        const investorData = update.$set['investors.$[elem]'];
+        if (investor.userId.toString() === investorData.userId.toString()) {
+          // Update totalAmount based on the new amount or profitAmount
+          investor.totalAmount = investorData.amount + investorData.profitAmount;
+        }
+      }
+      return investor;
+    });
+
+    // Update the investors in the investment document
+    investment.investors = updatedInvestors;
+    await investment.save();
+  }
+  next();
+});
+
 module.exports = mongoose.model("Investment", InvestmentSchema);
