@@ -18,8 +18,8 @@ const sendApprovalEmail = (adminEmail, user, investment, amount) => {
     const approvalId = uuidv4();
     pendingInvestments.set(approvalId, { investmentId: investment.id, userId: user.id, amount });
 
-    const approveLink = `http://192.168.0.105:8000/investment/approve/${approvalId}`;
-    const rejectLink = `http://192.168.0.105:8000/investment/reject/${approvalId}`;
+    const approveLink = `https://mehndiprofile.onrender.com/investment/approve/${approvalId}`;
+    const rejectLink = `https://mehndiprofile.onrender.com/investment/reject/${approvalId}`;
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -59,8 +59,8 @@ const sendWithdrawalEmail = (adminEmail, user, investment, amount) => {
     const withdrawId = uuidv4();
     pendingWithdrawals.set(withdrawId, { investmentId: investment.id, userId: user.id, amount });
 
-    const approveLink = `http://192.168.0.105:8000/investment/withdraw/approve/${withdrawId}`;
-    const rejectLink = `http://192.168.0.105:8000/investment/withdraw/reject/${withdrawId}`;
+    const approveLink = `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}`;
+    const rejectLink = `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}`;
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
