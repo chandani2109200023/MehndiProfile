@@ -245,8 +245,6 @@ const createInvestment = async (req, res) => {
         const {
             material,
             description,
-            minInvestment,
-            expectedProfit,
             costPrice,
             costQuantity,
         } = req.body;
@@ -254,8 +252,6 @@ const createInvestment = async (req, res) => {
         const investment = new Investment({
             material,
             description: description || "",
-            minInvestment,
-            expectedProfit,
             totalInvestment: 0,
             costPrice,
             costQuantity,

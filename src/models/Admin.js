@@ -21,6 +21,11 @@ const adminSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  role: {
+    type: String,
+    enum: ['admin', 'superAdmin'], // Only allow 'admin' or 'superAdmin'
+    default: 'admin', // Default role is 'admin'
+  },
 });
 
 // Hash password before saving the user

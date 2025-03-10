@@ -4,8 +4,6 @@ const InvestmentSchema = new mongoose.Schema(
   {
     material: { type: String, required: true },
     description: { type: String },
-    minInvestment: { type: Number, required: true, min: 0 },
-    expectedProfit: { type: Number, required: true, min: 0 },
     totalInvestment: { type: Number, default: 0, min: 0 },
     costPrice: { type: Number, required: true, min: 0 }, // Cost price per unit
     costQuantity: { type: Number, required: true, min: 0 }, // Total cost quantity
