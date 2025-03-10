@@ -17,7 +17,7 @@ const InvestmentSchema = new mongoose.Schema(
         amount: { type: Number, required: true, min: 0 },
         profit: { type: Number, min: 0 }, // Default profit set to 0
         profitAmount: { type: Number, default: 0, min: 0 },
-        totalAmount: { type: Number, default: amount+profitAmount }, // Field to store totalAmount
+        totalAmount: { type: Number }, // No default value here
       }
     ],
     status: { type: String, enum: ["open", "closed"], default: "open" },
@@ -35,7 +35,7 @@ InvestmentSchema.pre("save", function (next) {
     if (investor.profit === undefined || investor.profit === null) {
       investor.profit = this.expectedProfit;
     }
-    // Calculate totalAmount for each investor
+    // Calculate totalAmount for each investor dynamically
     investor.totalAmount = investor.amount + investor.profitAmount;
   });
 
