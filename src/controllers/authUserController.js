@@ -180,7 +180,8 @@ const verifyOtp = async (req, res) => {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ message: 'Failed to verify OTP' });
   }
-}; const resetPassword = async (req, res) => {
+};
+ const resetPassword = async (req, res) => {
   const { email, password, otp } = req.body; // Include OTP in the request body
 
   try {

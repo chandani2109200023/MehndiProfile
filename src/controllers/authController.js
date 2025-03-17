@@ -20,15 +20,11 @@ const registerAdmin = async (req, res) => {
       return res.status(400).json({ message: 'Pages must be an array' });
     }
 
-    // Hash the password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     // Create a new admin
     const admin = new Admin({
       name,
       email,
-      password: hashedPassword,
+      password,
       role: newRole,
       pages,
     });
@@ -53,13 +49,15 @@ const loginAdmin = async (req, res) => {
     }
 
     // Check if password matches
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+    const isMatch = await bcrypt.compare(password.trim(), admin.password);
+    console.log('Entered password:', password.trim());
+    console.log('Stored password hash:', admin.password);
+        if (!isMatch) {
+          return res.status(400).json({ message: 'Invalid credentials' });
+        }
 
     // Generate JWT Token
-    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET);
 
     // Send response with token, email, role, and pages
     res.json({
