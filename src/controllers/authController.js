@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
+
 const registerAdmin = async (req, res) => {
   const { name, email, password, role, pages } = req.body;
 
@@ -14,13 +15,24 @@ const registerAdmin = async (req, res) => {
     // Validate role, default to 'admin' if not provided or invalid
     const newRole = role && ['admin', 'superAdmin'].includes(role) ? role : 'admin';
 
-    // Validate pages (must be an array and not empty)
-    if (!Array.isArray(pages) || pages.length === 0) {
-      return res.status(400).json({ message: 'Pages must be a non-empty array' });
+    // Validate pages (must be an array)
+    if (!Array.isArray(pages)) {
+      return res.status(400).json({ message: 'Pages must be an array' });
     }
 
-    // Create a new admin with assigned pages
-    const admin = new Admin({ name, email, password, role: newRole, pages });
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create a new admin
+    const admin = new Admin({
+      name,
+      email,
+      password: hashedPassword,
+      role: newRole,
+      pages,
+    });
+
     await admin.save();
 
     res.status(201).json({ message: 'Admin registered successfully', admin });
@@ -34,19 +46,33 @@ const loginAdmin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Find admin by email
     const admin = await Admin.findOne({ email });
     if (!admin) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const isMatch = await admin.matchPassword(password);
+
+    // Check if password matches
+    const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET);
 
-    res.json({ token });
+    // Generate JWT Token
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    // Send response with token, email, role, and pages
+    res.json({
+      token,
+      email: admin.email,
+      role: admin.role,
+      pages: admin.pages,
+    });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error logging in:', err);
+    res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 };
+
 module.exports = { registerAdmin, loginAdmin };
