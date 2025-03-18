@@ -10,6 +10,10 @@ const investmentRoutes = require('./src/routes/investmentRoutes.js')
 const app = express();
 
 app.use(express.json());
+app.use(cors());
+
+// ✅ Enable CORS for specific origins
+app.use(cors({ origin: "http://localhost:3000" }));
 
 // Routes
 app.use('/investment',investmentRoutes);
