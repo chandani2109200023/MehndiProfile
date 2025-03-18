@@ -22,6 +22,13 @@ const uploadDocument = async (req, res) => {
             return res.status(400).json({ error: 'Both Passbook and Aadhaar images are required' });
         }
 
+        // Check if a document already exists for the user
+        const existingDocument = await Document.findOne({ userId });
+
+        if (existingDocument) {
+            return res.status(400).json({ error: 'Document already exists for this user' });
+        }
+
         const newDocument = new Document({
             userId,
             bankDetails: {
@@ -48,6 +55,7 @@ const uploadDocument = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
 
 // Get document by user ID
 const getDocumentByUserId = async (req, res) => {
