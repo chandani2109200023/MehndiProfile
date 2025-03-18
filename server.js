@@ -5,7 +5,8 @@ const adminRoutes = require('./src/routes/adminRoutes.js');
 const authRoutes = require('./src/routes/authRoute.js');
 const userRoutes = require('./src/routes/userRoutes.js');
 const documentRoute = require('./src/routes/documentRoutes.js');
-const investmentRoutes = require('./src/routes/investmentRoutes.js')
+const investmentRoutes = require('./src/routes/investmentRoutes.js');
+const cors = require("cors");
 
 const app = express();
 
