@@ -354,7 +354,49 @@ const rejectInvestment = async (req, res) => {
         res.status(500).json({ error: 'Unable to reject investment' });
     }
 };
+const deleteInvestment = async (req, res) => {
+    try {
+        const { id } = req.params;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid Investment ID' });
+        }
+
+        const investment = await Investment.findByIdAndDelete(id);
+
+        if (!investment) {
+            return res.status(404).json({ error: 'Investment not found' });
+        }
+
+        res.status(200).json({ message: 'Investment deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting investment:', err);
+        res.status(500).json({ error: 'Unable to delete investment' });
+    }
+};
+
+// Update Investment
+const updateInvestmentById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid Investment ID" });
+        }
+
+        const investment = await Investment.findByIdAndUpdate(id, updates, { new: true });
+
+        if (!investment) {
+            return res.status(404).json({ error: "Investment not found" });
+        }
+
+        res.status(200).json({ message: "Investment updated successfully", investment });
+    } catch (err) {
+        console.error("Error updating investment:", err);
+        res.status(500).json({ error: "Unable to update investment" });
+    }
+};
 // Update investment
 const updateInvestment = async (req, res) => {
     try {
@@ -415,6 +457,26 @@ const updateInvestment = async (req, res) => {
         res.status(500).json({ error: "Unable to update investment" });
     }
 };
+const uploadInvestmentImages = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
+
+        const investment = await Investment.findById(id);
+        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+
+        // Store multiple image paths
+        const imagePaths = req.files.map(file => file.path);
+        investment.images.push(...imagePaths);
+        await investment.save();
+
+        res.status(200).json({ message: 'Images uploaded successfully', investment });
+    } catch (err) {
+        console.error('Error uploading images:', err);
+        res.status(500).json({ error: 'Unable to upload images' });
+    }
+};
+
 
 module.exports = {
     getAllInvestments,
@@ -427,5 +489,8 @@ module.exports = {
     updateInvestorProfit,
     approveWithdrawal,
     rejectWithdrawal,
-    requestWithdrawal
+    requestWithdrawal,
+    deleteInvestment,
+    updateInvestmentById,
+    uploadInvestmentImages,
 };
