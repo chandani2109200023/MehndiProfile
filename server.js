@@ -12,8 +12,12 @@ const app = express();
 
 app.use(express.json());
 
-// ✅ Enable CORS for specific origins
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://mehndipvc.in"], // Use an array for multiple origins
+    credentials: true, // If using cookies or authentication
+  })
+);
 
 // Routes
 app.use('/investment',investmentRoutes);

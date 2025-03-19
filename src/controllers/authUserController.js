@@ -132,14 +132,14 @@ const sendOtp = async (req, res) => {
               </div>
               <div class="content">
                 <p>Hello,</p>
-                <p>Thank you for choosing Agrive Mart! We have received your request for verification. Please use the OTP code below to complete your action:</p>
+                <p>Thank you for choosing Mehndi Profile! We have received your request for verification. Please use the OTP code below to complete your action:</p>
                 <p class="otp">${otp}</p>
                 <p>This OTP is valid for the next 8 minutes.</p>
                 <p>If you did not request this, please ignore this message.</p>
               </div>
               <div class="footer">
                 <p>Best regards,</p>
-                <p><strong>Agrive Mart Team</strong></p>
+                <p><strong>Mehndi Profile Team</strong></p>
                 <p>For support, contact us at: <a href="agrivemart3@gmail.com" target="_blank">agrivemart3@gmail.com</a></p>
               </div>
             </div>
@@ -181,7 +181,7 @@ const verifyOtp = async (req, res) => {
     res.status(500).json({ message: 'Failed to verify OTP' });
   }
 };
- const resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
   const { email, password, otp } = req.body; // Include OTP in the request body
 
   try {
@@ -278,8 +278,29 @@ const loginUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to log in' });
   }
 };
+const deleteUser = async (req, res) => {
+  const { id } = req.params; // Get user ID from URL params
+
+  try {
+    // Find the user by ID
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete the user
+    await User.deleteOne({ _id: id });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
+  }
+};
+
 
 module.exports = {
+  deleteUser,
   registerUser,
   loginUser,
   sendOtp,
