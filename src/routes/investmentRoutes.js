@@ -42,7 +42,7 @@ router.patch("/:investmentId/investor/:investorId",authAdmin, updateInvestorProf
 router.post('/withdraw',authUser,requestWithdrawal);
 router.get('/withdraw/:withdrawId',approveWithdrawal);
 router.get('/reject/:withdrawId',rejectWithdrawal);
-router.put('investment/:id',authAdmin ,updateInvestmentById);  // Route for updating an investment
+router.patch('/investment/:id',authAdmin ,updateInvestmentById);  // Route for updating an investment
 router.delete('/:id',authAdmin, deleteInvestment);
 router.post('/investment/:id/upload-images',authAdmin, upload.array('images', 5), uploadInvestmentImages);
 

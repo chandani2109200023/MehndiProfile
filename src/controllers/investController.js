@@ -375,29 +375,32 @@ const deleteInvestment = async (req, res) => {
     }
 };
 
-// Update Investment
 const updateInvestmentById = async (req, res) => {
     try {
         const { id } = req.params;
-        const updates = req.body;
+        console.log("Received Update Request for ID:", id);
+        console.log("Request Body:", req.body);
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid Investment ID" });
         }
 
-        const investment = await Investment.findByIdAndUpdate(id, updates, { new: true });
+        // Update investment directly in the database
+        const investment = await Investment.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
 
         if (!investment) {
-            return res.status(404).json({ error: "Investment not found" });
+            return res.status(404).json({ message: "Investment not found" });
         }
 
+        console.log("After Update:", investment);
+
         res.status(200).json({ message: "Investment updated successfully", investment });
-    } catch (err) {
-        console.error("Error updating investment:", err);
-        res.status(500).json({ error: "Unable to update investment" });
+    } catch (error) {
+        console.error("Error updating investment:", error);
+        res.status(500).json({ message: "Error updating investment", error: error.message });
     }
 };
-// Update investment
+
 const updateInvestment = async (req, res) => {
     try {
         const { id } = req.params;
@@ -457,6 +460,7 @@ const updateInvestment = async (req, res) => {
         res.status(500).json({ error: "Unable to update investment" });
     }
 };
+
 const uploadInvestmentImages = async (req, res) => {
     try {
         const { id } = req.params;
