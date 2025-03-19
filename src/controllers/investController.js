@@ -6,6 +6,9 @@ const { v4: uuidv4 } = require('uuid');
 
 const pendingInvestments = new Map();
 const pendingWithdrawals = new Map();
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -464,20 +467,32 @@ const updateInvestment = async (req, res) => {
 const uploadInvestmentImages = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
 
+        // Check if files exist
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No files uploaded" });
+        }
+
+        // Find the investment record by ID
         const investment = await Investment.findById(id);
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+        if (!investment) {
+            return res.status(404).json({ error: "Investment not found" });
+        }
 
-        // Store multiple image paths
-        const imagePaths = req.files.map(file => file.path);
-        investment.images.push(...imagePaths);
+        // Convert uploaded files to MongoDB-compatible format
+        const imageObjects = req.files.map(file => ({
+            data: file.buffer, // Binary image data
+            contentType: file.mimetype // Image MIME type
+        }));
+
+        // Append new images to existing images array
+        investment.images.push(...imageObjects);
         await investment.save();
 
-        res.status(200).json({ message: 'Images uploaded successfully', investment });
+        res.status(200).json({ message: "Images uploaded successfully", investment });
     } catch (err) {
-        console.error('Error uploading images:', err);
-        res.status(500).json({ error: 'Unable to upload images' });
+        console.error("Error uploading images:", err);
+        res.status(500).json({ error: "Unable to upload images" });
     }
 };
 
@@ -497,4 +512,5 @@ module.exports = {
     deleteInvestment,
     updateInvestmentById,
     uploadInvestmentImages,
+    upload
 };

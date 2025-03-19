@@ -18,7 +18,12 @@ const InvestmentSchema = new mongoose.Schema(
         totalAmount: { type: Number }, // No default value here
       }
     ],
-    images: [{ type: String }], 
+    images: [
+      {
+        data: { type: Buffer, required: true }, // Store image as binary data
+        contentType: { type: String, required: true } // Store image format
+      }
+    ],
     status: { type: String, enum: ["open", "closed"], default: "open" },
   },
   { timestamps: true }

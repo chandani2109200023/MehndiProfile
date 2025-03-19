@@ -16,8 +16,10 @@ const {
   uploadInvestmentImages
 } = require('../controllers/investController');
 const authAdmin = require('../middleware/authAdmin');
-const authUser = require('../middleware/auth'); // Middleware for authenticated users
-const upload = require('../middleware/upload');
+const authUser = require('../middleware/auth'); 
+const investController = require('../controllers/investController');
+
+const upload = investController.upload.array("images", 5);
 
 
 const router = express.Router();
@@ -44,6 +46,6 @@ router.get('/withdraw/:withdrawId',approveWithdrawal);
 router.get('/reject/:withdrawId',rejectWithdrawal);
 router.patch('/investment/:id',authAdmin ,updateInvestmentById);  // Route for updating an investment
 router.delete('/:id',authAdmin, deleteInvestment);
-router.post('/investment/:id/upload-images',authAdmin, upload.array('images', 5), uploadInvestmentImages);
+router.post('/investment/:id/upload-images',authAdmin, upload, uploadInvestmentImages);
 
 module.exports = router;
