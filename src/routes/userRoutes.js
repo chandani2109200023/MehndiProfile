@@ -15,5 +15,5 @@ router.post('/login', loginUser);
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
 router.post('/reset-password', resetPassword);
-router.get('/payment',getPaymentsByUserId);
+router.get('/payment/:userId',getPaymentsByUserId);
 module.exports = router;
