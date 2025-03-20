@@ -3,6 +3,7 @@ const Investment = require('../models/investment');
 const User = require('../models/User'); // Adjust path based on your project structure
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
+const Payment=require('../models/payment');
 
 const pendingInvestments = new Map();
 const pendingWithdrawals = new Map();
@@ -156,6 +157,10 @@ const approveWithdrawal = async (req, res) => {
 
         investment.totalInvestment -= amount;
         await investment.save();
+        await Payment.findOneAndUpdate(
+            { investmentId, userId, amount, status: 'pending', type: 'withdrawal' },
+            { status: 'approved' }
+        );
         pendingWithdrawals.delete(withdrawId);
 
         res.status(200).json({ message: 'Withdrawal approved successfully' });
@@ -201,6 +206,14 @@ const requestWithdrawal = async (req, res) => {
         if (amount > investor.amount) {
             return res.status(400).json({ error: 'Withdrawal amount exceeds invested amount' });
         }
+        await Payment.create({
+            investmentId,
+            userId,
+            amount,
+            status: 'pending',
+            type: 'withdrawal',
+            createdAt: new Date()
+        });
 
         sendWithdrawalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
         res.status(200).json({ message: 'Withdrawal request sent for approval' });
@@ -303,6 +316,14 @@ const invest = async (req, res) => {
         const investment = await Investment.findById(investmentId);
         if (!investment) return res.status(404).json({ error: 'Investment not found' });
         if (investment.status !== 'open') return res.status(400).json({ error: 'This investment opportunity is closed' });
+        const payment = new Payment({
+            investmentId,
+            userId,
+            amount,
+            type: 'investment',
+            status: 'pending'
+        });
+        await payment.save();
 
         sendApprovalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
         res.status(200).json({ message: 'Investment request sent for approval' });
@@ -334,6 +355,10 @@ const approveInvestment = async (req, res) => {
         investment.totalInvestment += amount;
 
         await investment.save();
+        await Payment.findOneAndUpdate(
+            { investmentId, userId, amount, status: 'pending', type: 'investment' },
+            { status: 'approved' }
+        );
         pendingInvestments.delete(approvalId);
 
         res.status(200).json({ message: 'Investment approved successfully' });
