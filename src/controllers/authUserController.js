@@ -258,7 +258,6 @@ const deleteUser = async (req, res) => {
 };
 
 const sendLoginOTP = async (phone) => {
-  F
   try {
     // Find user by phone number
     const user = await User.findOne({ phone });
