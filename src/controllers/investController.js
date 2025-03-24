@@ -590,20 +590,13 @@ const updateInvestment = async (req, res) => {
         if (updates.companyMargin !== undefined) {
             investment.companyMargin = updates.companyMargin;
         }
-
-        let costPerUnit = 0;
-        if (investment.costQuantity >= 0) {
-            costPerUnit = investment.costPrice / investment.costQuantity;
-        }
-
-        // Ensure sellingQuantity is not greater than available costQuantity
         if (investment.sellingQuantity > investment.costQuantity) {
             return res.status(400).json({ error: "Selling quantity cannot exceed available cost quantity" });
         }
 
         // Update profit for investors
         investment.investors.forEach(investor => {
-            const newProfit = (((investment.sellingPrice - costPerUnit * investment.sellingQuantity)-investment.companyMargin) * investor.profit) / 100;
+            const newProfit = (((investment.sellingPrice - investment.costPrice)-investment.companyMargin) * investor.profit) / 100;
             investor.profitAmount += newProfit;
         });
 
