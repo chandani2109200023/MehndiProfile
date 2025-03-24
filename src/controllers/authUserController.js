@@ -38,7 +38,6 @@ const validateOtp = async (user, otp) => {
     throw new Error('Could not validate OTP');
   }
 };
-
 // Send OTP to User's email
 const sendOtp = async (req, res) => {
   const { email } = req.body;
@@ -257,188 +256,149 @@ const deleteUser = async (req, res) => {
   }
 };
 
-const sendLoginOTP = async (phone) => {
+const generateLoginOtp = async (user) => {
   try {
-    // Find user by phone number
-    const user = await User.findOne({ phone });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
+    const loginOtpHash = await bcrypt.hash(otp, 10); // Hash the OTP
+    const loginOtpExpiry = new Date(Date.now() + 8 * 60 * 1000); // Expire after 8 minutes
 
+    // Save OTP hash and expiry to user
+    user.loginOtpHash = loginOtpHash;
+    user.loginOtpExpiry = loginOtpExpiry;
+    await user.save();
+
+    return otp; // Return the plain OTP for sending
+  } catch (error) {
+    console.error('Error generating OTP:', error);
+    throw new Error('Could not generate OTP');
+  }
+};
+const sendLoginOTP = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Check if the phone number exists
+    const user = await User.findOne({ phone });
     if (!user) {
-      return { success: false, message: "User not found" };
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     if (!user.email) {
-      return { success: false, message: "No email associated with this phone number" };
+      return res.status(400).json({ success: false, message: "No email associated with this phone number" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
-    const salt = await bcrypt.genSalt(10);
-    const otpHash = await bcrypt.hash(otp, salt);
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 mins
+    // Generate OTP and save it to the user
+    const otp = await generateLoginOtp(user);
 
-    // Save OTP details
-    user.loginOtpHash = otpHash;
-    user.loginOtpExpiry = otpExpiry;
-    await user.save();
+    // Setup nodemailer transport
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-    // Prepare email options
+    // Email content
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: user.email, // Send OTP to the email found
+      to: user.email,
       subject: "Your OTP Code for Login",
       html: `
-            <html>
-              <head>
-                <style>
-                  body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    color: #333;
-                    margin: 0;
-                    padding: 0;
-                  }
-                  .container {
-                    width: 100%;
-                    max-width: 600px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    background-color: #fff;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                  }
-                  .header {
-                    text-align: center;
-                    margin-bottom: 20px;
-                  }
-                  .header h2 {
-                    color: #4CAF50;
-                    font-size: 24px;
-                  }
-                  .content {
-                    font-size: 16px;
-                    line-height: 1.5;
-                    margin-bottom: 20px;
-                  }
-                  .otp {
-                    font-weight: bold;
-                    font-size: 18px;
-                    color: #4CAF50;
-                  }
-                  .footer {
-                    text-align: center;
-                    font-size: 14px;
-                    color: #888;
-                    margin-top: 30px;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h2>Agrive Mart - OTP Verification</h2>
-                  </div>
-                  <div class="content">
-                    <p>Hello,</p>
-                    <p>Your OTP for login is: <span class="otp">${otp}</span></p>
-                    <p>This OTP is valid for the next 10 minutes.</p>
-                  </div>
-                  <div class="footer">
-                    <p>Best regards,</p>
-                    <p><strong>Agrive Mart Team</strong></p>
-                  </div>
-                </div>
-              </body>
-            </html>
-          `,
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 0; }
+              .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+              .header { text-align: center; margin-bottom: 20px; }
+              .header h2 { color: #4CAF50; font-size: 24px; }
+              .content { font-size: 16px; line-height: 1.5; margin-bottom: 20px; }
+              .otp { font-weight: bold; font-size: 18px; color: #4CAF50; }
+              .footer { text-align: center; font-size: 14px; color: #888; margin-top: 30px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h2>Agrive Mart - OTP Verification</h2>
+              </div>
+              <div class="content">
+                <p>Hello,</p>
+                <p>Your OTP for login is: <span class="otp">${otp}</span></p>
+                <p>This OTP is valid for the next 8 minutes.</p>
+              </div>
+              <div class="footer">
+                <p>Best regards,</p>
+                <p><strong>Agrive Mart Team</strong></p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
     };
 
-    // Send OTP to the email found
+    // Send OTP via email
     await transporter.sendMail(mailOptions);
 
-    return { success: true, message: `OTP sent to the email associated with phone number ${phone}` };
+    return res.status(200).json({
+      success: true,
+      message: `OTP sent successfully to ${user.email}`,
+    });
 
   } catch (error) {
     console.error("Error sending OTP:", error);
-    return { success: false, message: "Failed to send OTP" };
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send OTP. Please try again later.",
+      error: error.message,
+    });
   }
 };
-const verifyLoginOTP = async (phone, otp) => {
+const loginUser = async (req, res) => {
   try {
+    const { phone, password, otp } = req.body;
+
+    if (!phone || !password || !otp) {
+      return res.status(400).json({ success: false, message: "Phone, password, and OTP are required" });
+    }
+
     // Find user by phone number
     const user = await User.findOne({ phone });
 
     if (!user) {
-      return { success: false, message: "User not found" };
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (!user.email) {
-      return { success: false, message: "No email associated with this phone number" };
-    }
-
+    // Validate OTP before proceeding
     if (!user.loginOtpHash || !user.loginOtpExpiry || new Date() > user.loginOtpExpiry) {
-      return { success: false, message: "OTP expired or invalid" };
-    }
-
-    const isMatch = await bcrypt.compare(otp, user.loginOtpHash);
-    if (!isMatch) {
-      return { success: false, message: "Invalid OTP" };
-    }
-
-    // OTP is correct, generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, phone: user.phone },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // Clear OTP fields after successful login
-    user.loginOtpHash = null;
-    user.loginOtpExpiry = null;
-    await user.save();
-
-    return { success: true, message: "Login successful", token };
-
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    return { success: false, message: "OTP verification failed" };
-  }
-};
-const loginUser = async (req, res) => {
-  const { phone, password, otp } = req.body;
-
-  try {
-    // Find user by phone number and get the email
-    const user = await User.findOne({ phone });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    // Verify password
-    const isPasswordMatch = await bcrypt.compare(password.trim(), user.password);
-    if (!isPasswordMatch) {
-      return res.status(400).json({ message: "Invalid password" });
-    }
-
-    // Verify OTP
-    if (!user.loginOtpHash || !user.loginOtpExpiry || new Date() > user.loginOtpExpiry) {
-      return res.status(400).json({ message: "OTP expired or invalid" });
+      return res.status(400).json({ success: false, message: "OTP expired or invalid" });
     }
 
     const isOtpMatch = await bcrypt.compare(otp, user.loginOtpHash);
     if (!isOtpMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
-    // OTP and Password are both correct, generate JWT token
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    // Clear OTP fields after successful login
+    // Clear OTP fields after successful verification
     user.loginOtpHash = null;
     user.loginOtpExpiry = null;
     await user.save();
 
+    // Verify password
+    const isPasswordMatch = await bcrypt.compare(password.trim(), user.password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ success: false, message: "Invalid password" });
+    }
+
+    // Generate JWT token only after OTP and password authentication
+    const token = jwt.sign(
+      { id: user._id, email: user.email, phone: user.phone },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     return res.status(200).json({
+      success: true,
       message: "Login successful",
       token,
       user: {
@@ -451,9 +411,10 @@ const loginUser = async (req, res) => {
 
   } catch (error) {
     console.error("Error logging in:", error);
-    res.status(500).json({ message: "Failed to log in" });
+    res.status(500).json({ success: false, message: "Failed to log in" });
   }
 };
+
 
 module.exports = {
   deleteUser,
