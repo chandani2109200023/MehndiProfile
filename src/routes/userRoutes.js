@@ -5,6 +5,8 @@ const {
   sendOtp,
   verifyOtp,
   resetPassword,
+  verifyLoginOTP,
+  sendLoginOTP,
 } = require('../controllers/authUserController');
 const{
   getPaymentsByUserId
@@ -16,4 +18,6 @@ router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
 router.post('/reset-password', resetPassword);
 router.get('/payment/:userId',getPaymentsByUserId);
+router.post('/send-otpLogin', sendLoginOTP);
+router.post('/verify-otpLogin', verifyLoginOTP);
 module.exports = router;

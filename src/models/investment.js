@@ -3,12 +3,13 @@ const mongoose = require("mongoose");
 const InvestmentSchema = new mongoose.Schema(
   {
     material: { type: String, required: true },
-    description: { type: String },
+    description: { type: String,required:true },
     totalInvestment: { type: Number, default: 0, min: 0 },
-    costPrice: { type: Number, required: true, min: 0 }, // Cost price per unit
-    costQuantity: { type: Number, required: true, min: 0 }, // Total cost quantity
+    costPrice: { type: Number, default:0, min: 0 }, // Cost price per unit
+    costQuantity: { type: Number, default:0, min: 0 }, // Total cost quantity
     sellingPrice: { type: Number, default: 0, min: 0 }, // Selling price per unit (default to 0)
     sellingQuantity: { type: Number, default: 0, min: 0 }, // Total selling quantity (default to 0)
+    companyMargin: {type: Number,default:0,min:0},
     investors: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

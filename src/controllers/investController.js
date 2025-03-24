@@ -19,169 +19,228 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendApprovalEmail = async (adminEmail, investmentId, userId, amount) => {
+const sendApprovalEmail = async (investmentId, userId, amount) => {
     try {
-        // Fetch user details
         const user = await User.findById(userId);
         if (!user) {
-            console.error('User not found');
+            console.error("User not found");
             return;
         }
 
-        // Fetch investment details
         const investment = await Investment.findById(investmentId);
         if (!investment) {
-            console.error('Investment not found');
+            console.error("Investment not found");
             return;
         }
 
         const approvalId = uuidv4();
-        pendingInvestments.set(approvalId, { investmentId, userId, amount });
+        pendingInvestments.set(approvalId, { investmentId, userId, amount, approvedBy: new Set() });
 
-        const approveLink = `https://mehndiprofile.onrender.com/investment/approve/${approvalId}`;
-        const rejectLink = `https://mehndiprofile.onrender.com/investment/reject/${approvalId}`;
+        const adminEmails = [
+            "chandanikumari21092000@gmail.com",
+            "h.18.chandanikumaei@gmail.com"
+        ];
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: "chandanikumari21092000@gmail.com", // Use dynamic admin email
-            subject: 'New Investment Request Approval Needed',
-            html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
-                <h2 style="color: #333;">Investment Approval Request</h2>
-                <p style="font-size: 16px;">Dear Admin,</p>
-                <p style="font-size: 14px;">You have received a new investment request.</p>
-                
-                <h3 style="color: #007bff;">User Details</h3>
-                <p><strong>Name:</strong> ${user.name}</p>
-                <p><strong>Email:</strong> ${user.email}</p>
-                <p><strong>Contact:</strong> ${user.phone}</p>
+        const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/approve/${approvalId}?admin=${adminEmail}`;
+        const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/reject/${approvalId}?admin=${adminEmail}`;
 
-                <h3 style="color: #28a745;">Investment Details</h3>
-                <p><strong>Investment Name:</strong> ${investment.name}</p>
-                <p><strong>Investment ID:</strong> ${investment.id}</p>
-                <p><strong>Amount:</strong> $${amount}</p>
+        adminEmails.forEach(async (adminEmail) => {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: adminEmail,
+                subject: "New Investment Request Approval Needed",
+                html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
+                    <h2 style="color: #333;">Investment Approval Request</h2>
+                    <p style="font-size: 16px;">Dear Admin,</p>
+                    <p style="font-size: 14px;">You have received a new investment request.</p>
 
-                <p style="font-size: 14px;">Please review and take action:</p>
-                <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
-                <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
-            </div>
-            `
-        };
+                    <h3 style="color: #007bff;">User Details</h3>
+                    <p><strong>Name:</strong> ${user.name}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Contact:</strong> ${user.phone}</p>
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Approval email sent:', info.response);
+                    <h3 style="color: #28a745;">Investment Details</h3>
+                    <p><strong>Investment Name:</strong> ${investment.name}</p>
+                    <p><strong>Investment ID:</strong> ${investment.id}</p>
+                    <p><strong>Amount:</strong> $${amount}</p>
+
+                    <p style="font-size: 14px;">Please review and take action:</p>
+                    <a href="${approveLink(adminEmail)}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
+                    <a href="${rejectLink(adminEmail)}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
+                </div>
+                `,
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`Approval email sent to ${adminEmail}:`, info.response);
+        });
+
     } catch (error) {
-        console.error('Error sending approval email:', error);
+        console.error("Error sending approval email:", error);
     }
 };
 
-// Send Withdrawal Request Email
-const sendWithdrawalEmail = async (adminEmail, investmentId, userId, amount) => {
+const sendWithdrawalEmail = async (investmentId, userId, amount) => {
     try {
         const user = await User.findById(userId);
         if (!user) {
-            console.error('User not found');
+            console.error("User not found");
             return;
         }
 
-        // Fetch investment details
         const investment = await Investment.findById(investmentId);
         if (!investment) {
-            console.error('Investment not found');
+            console.error("Investment not found");
             return;
         }
 
         const withdrawId = uuidv4();
-        pendingWithdrawals.set(withdrawId, { investmentId: investment.id, userId: user.id, amount });
+        pendingWithdrawals.set(withdrawId, { 
+            investmentId, 
+            userId, 
+            amount, 
+            approvedBy: new Set(), 
+            rejectedBy: new Set() 
+        });
 
-        const approveLink = `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}`;
-        const rejectLink = `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}`;
+        const adminEmails = [
+            "chandanikumari21092000@gmail.com",
+            "h.18.chandanikumaei@gmail.com"
+        ];
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: "chandanikumari21092000@gmail.com",
-            subject: 'New Withdrawal Request Approval Needed',
-            html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
-            <h2 style="color: #333;">Withdrawal Request Approval</h2>
-            <p style="font-size: 16px;">Dear Admin,</p>
-            <p style="font-size: 14px;">A user has requested a withdrawal.</p>
-            
-            <h3 style="color: #007bff;">User Details</h3>
-            <p><strong>Name:</strong> ${user.name}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Contact:</strong> ${user.phone}</p>
+        const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}?admin=${adminEmail}`;
+        const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}?admin=${adminEmail}`;
 
-            <h3 style="color: #dc3545;">Withdrawal Details</h3>
-            <p><strong>Investment Name:</strong> ${investment.name}</p>
-            <p><strong>Investment ID:</strong> ${investment.id}</p>
-            <p><strong>Withdrawal Amount:</strong> $${amount}</p>
+        adminEmails.forEach(async (adminEmail) => {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: adminEmail,
+                subject: "New Withdrawal Request Approval Needed",
+                html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd;">
+                    <h2 style="color: #333;">Withdrawal Request Approval</h2>
+                    <p style="font-size: 16px;">Dear Admin,</p>
+                    <p style="font-size: 14px;">A user has requested a withdrawal.</p>
 
-            <p style="font-size: 14px;">Please review and take action:</p>
-            <a href="${approveLink}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
-            <a href="${rejectLink}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
-        </div>
-        `
-        };
+                    <h3 style="color: #007bff;">User Details</h3>
+                    <p><strong>Name:</strong> ${user.name}</p>
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Contact:</strong> ${user.phone}</p>
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Approval email sent:', info.response);
+                    <h3 style="color: #dc3545;">Withdrawal Details</h3>
+                    <p><strong>Investment Name:</strong> ${investment.name}</p>
+                    <p><strong>Investment ID:</strong> ${investment.id}</p>
+                    <p><strong>Withdrawal Amount:</strong> $${amount}</p>
+
+                    <p style="font-size: 14px;">Please review and take action:</p>
+                    <a href="${approveLink(adminEmail)}" style="background: green; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Approve</a> 
+                    <a href="${rejectLink(adminEmail)}" style="background: red; color: white; padding: 12px 18px; text-decoration: none; border-radius: 5px;">Reject</a>
+                </div>
+                `,
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`Approval email sent to ${adminEmail}:`, info.response);
+        });
+
     } catch (error) {
-        console.error('Error sending approval email:', error);
+        console.error("Error sending approval email:", error);
     }
 };
 
-// Approve Withdrawal
+
+// Approve Withdrawal (Requires Two Admins)
 const approveWithdrawal = async (req, res) => {
     try {
         const { withdrawId } = req.params;
-        const pending = pendingWithdrawals.get(withdrawId);
-        if (!pending) return res.status(404).json({ error: 'Withdrawal request not found' });
+        const { admin } = req.query;
 
-        const { investmentId, userId, amount } = pending;
-        const investment = await Investment.findById(investmentId);
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
-
-        const investorIndex = investment.investors.findIndex(i => i.userId.toString() === userId);
-        if (investorIndex === -1) return res.status(404).json({ error: 'Investor not found' });
-
-        const investor = investment.investors[investorIndex];
-
-        if (amount >= investor.amount) {
-            // If withdrawing the full amount, remove investor from list
-            investment.investors.splice(investorIndex, 1);
-        } else {
-            // Deduct the withdrawn amount
-            investor.amount -= amount;
+        if (!pendingWithdrawals.has(withdrawId)) {
+            return res.status(404).json({ error: "Withdrawal request not found or already processed" });
         }
 
-        investment.totalInvestment -= amount;
-        await investment.save();
-        await Payment.findOneAndUpdate(
-            { investmentId, userId, amount, status: 'pending', type: 'withdrawal' },
-            { status: 'approved' }
-        );
-        pendingWithdrawals.delete(withdrawId);
+        const withdrawal = pendingWithdrawals.get(withdrawId);
 
-        res.status(200).json({ message: 'Withdrawal approved successfully' });
+        if (withdrawal.approvedBy.has(admin)) {
+            return res.status(400).json({ error: "Admin has already approved this withdrawal" });
+        }
+
+        withdrawal.approvedBy.add(admin);
+
+        console.log(`Admin ${admin} approved. Total approvals:`, withdrawal.approvedBy.size);
+
+        // If two approvals are given, process the withdrawal
+        if (withdrawal.approvedBy.size >= 2) {
+            const { investmentId, userId, amount } = withdrawal;
+
+            const investment = await Investment.findById(investmentId);
+            if (!investment) return res.status(404).json({ error: "Investment not found" });
+
+            const investorIndex = investment.investors.findIndex(i => i.userId.toString() === userId);
+            if (investorIndex === -1) return res.status(404).json({ error: "Investor not found" });
+
+            const investor = investment.investors[investorIndex];
+
+            if (amount >= investor.amount) {
+                investment.investors.splice(investorIndex, 1);
+            } else {
+                investor.amount -= amount;
+            }
+
+            investment.totalInvestment -= amount;
+            await investment.save();
+
+            await Payment.findOneAndUpdate(
+                { investmentId, userId, amount, status: "pending", type: "withdrawal" },
+                { status: "approved" }
+            );
+
+            pendingWithdrawals.delete(withdrawId);
+            console.log("Withdrawal approved and processed.");
+            return res.status(200).json({ message: "Withdrawal approved successfully!" });
+        }
+
+        res.status(200).json({ message: "Approval recorded. Waiting for second admin." });
+
     } catch (err) {
-        console.error('Error approving withdrawal:', err);
-        res.status(500).json({ error: 'Unable to approve withdrawal' });
+        console.error("Error approving withdrawal:", err);
+        res.status(500).json({ error: "Unable to approve withdrawal" });
     }
 };
 
-// Reject Withdrawal
+// Reject Withdrawal (Requires Two Admins)
 const rejectWithdrawal = async (req, res) => {
     try {
         const { withdrawId } = req.params;
+        const { admin } = req.query;
+
         if (!pendingWithdrawals.has(withdrawId)) {
-            return res.status(404).json({ error: 'Withdrawal request not found' });
+            return res.status(404).json({ error: "Withdrawal request not found or already processed" });
         }
-        pendingWithdrawals.delete(withdrawId);
-        res.status(200).json({ message: 'Withdrawal request rejected' });
+
+        const withdrawal = pendingWithdrawals.get(withdrawId);
+
+        if (withdrawal.rejectedBy.has(admin)) {
+            return res.status(400).json({ error: "Admin has already rejected this withdrawal" });
+        }
+
+        withdrawal.rejectedBy.add(admin);
+
+        console.log(`Admin ${admin} rejected. Total rejections:`, withdrawal.rejectedBy.size);
+
+        // If two rejections are recorded, remove the request
+        if (withdrawal.rejectedBy.size >= 2) {
+            pendingWithdrawals.delete(withdrawId);
+            console.log("Withdrawal request rejected by both admins and removed.");
+            return res.status(200).json({ message: "Withdrawal request fully rejected." });
+        }
+
+        res.status(200).json({ message: "Rejection recorded. Waiting for second admin." });
+
     } catch (err) {
-        console.error('Error rejecting withdrawal:', err);
-        res.status(500).json({ error: 'Unable to reject withdrawal' });
+        console.error("Error rejecting withdrawal:", err);
+        res.status(500).json({ error: "Unable to reject withdrawal" });
     }
 };
 
@@ -191,67 +250,73 @@ const requestWithdrawal = async (req, res) => {
         const { investmentId, userId, amount } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(investmentId) || !mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ error: 'Invalid IDs provided' });
+            return res.status(400).json({ error: "Invalid IDs provided" });
         }
         if (!amount || amount <= 0) {
-            return res.status(400).json({ error: 'Withdrawal amount must be greater than 0' });
+            return res.status(400).json({ error: "Withdrawal amount must be greater than 0" });
         }
 
         const investment = await Investment.findById(investmentId);
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+        if (!investment) return res.status(404).json({ error: "Investment not found" });
 
         const investor = investment.investors.find(i => i.userId.toString() === userId);
-        if (!investor) return res.status(404).json({ error: 'Investor not found in this investment' });
+        if (!investor) return res.status(404).json({ error: "Investor not found in this investment" });
 
         if (amount > investor.amount) {
-            return res.status(400).json({ error: 'Withdrawal amount exceeds invested amount' });
+            return res.status(400).json({ error: "Withdrawal amount exceeds invested amount" });
         }
+
         await Payment.create({
             investmentId,
             userId,
             amount,
-            status: 'pending',
-            type: 'withdrawal',
+            status: "pending",
+            type: "withdrawal",
             createdAt: new Date()
         });
 
-        sendWithdrawalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
-        res.status(200).json({ message: 'Withdrawal request sent for approval' });
+        sendWithdrawalEmail(investmentId, userId, amount);
+        res.status(200).json({ message: "Withdrawal request sent for approval" });
     } catch (err) {
-        console.error('Error processing withdrawal request:', err);
-        res.status(500).json({ error: 'Unable to process withdrawal request' });
+        console.error("Error processing withdrawal request:", err);
+        res.status(500).json({ error: "Unable to process withdrawal request" });
     }
 };
+
 const updateInvestorProfit = async (req, res) => {
     try {
         const { investmentId, investorId } = req.params;
         const { profit } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(investmentId) || !mongoose.Types.ObjectId.isValid(investorId)) {
-            return res.status(400).json({ error: 'Invalid Investment ID or Investor ID' });
-        }
-        if (profit === undefined || profit < 0) {
-            return res.status(400).json({ error: 'Invalid profit percentage' });
+            return res.status(400).json({ error: "Invalid Investment ID or Investor ID" });
         }
 
         const investment = await Investment.findById(investmentId);
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
+        if (!investment) return res.status(404).json({ error: "Investment not found" });
 
         console.log("Investment Investors:", investment.investors); // Debugging
 
-        // Try matching using investor's `_id` instead of `userId`
+        // Find investor by _id
         const investor = investment.investors.find(inv => inv._id.toString() === investorId);
+        if (!investor) return res.status(404).json({ error: "Investor not found in this investment" });
 
-        if (!investor) return res.status(404).json({ error: 'Investor not found in this investment' });
+        // Initially set profit as (investor.amount / investment.totalAmount) * 100
+        if (investor.profit === undefined || investor.profit === 0) {
+            investor.profit = (investor.amount / investment.totalAmount) * 100;
+        }
 
-        // Update the profit percentage
-        investor.profit = profit;
+        // If a new profit value is provided, update it
+        if (profit !== undefined) {
+            if (profit < 0) return res.status(400).json({ error: "Invalid profit percentage" });
+            investor.profit = profit;
+        }
 
         await investment.save();
-        res.status(200).json({ message: 'Investor profit updated successfully', investment });
+        res.status(200).json({ message: "Investor profit updated successfully", investment });
     } catch (err) {
-        console.error('Error updating investor profit:', err);
-        res.status(500).json({ error: 'Unable to update investor profit' });
+        console.error("Error updating investor profit:", err);
+        res.status(500).json({ error: "Unable to update investor profit" });
     }
 };
 
@@ -260,17 +325,15 @@ const createInvestment = async (req, res) => {
     try {
         const {
             material,
-            description,
-            costPrice,
-            costQuantity,
+            description
         } = req.body;
 
         const investment = new Investment({
             material,
             description: description || "",
             totalInvestment: 0,
-            costPrice,
-            costQuantity,
+            costPrice:0,
+            costQuantity:0,
             sellingPrice: 0,
             sellingQuantity: 0,
             investors: [],
@@ -325,63 +388,126 @@ const invest = async (req, res) => {
         });
         await payment.save();
 
-        sendApprovalEmail(process.env.ADMIN_EMAIL, investmentId, userId, amount);
+        sendApprovalEmail(investmentId, userId, amount);
         res.status(200).json({ message: 'Investment request sent for approval' });
     } catch (err) {
         console.error('Error processing investment request:', err);
         res.status(500).json({ error: 'Unable to process investment request' });
     }
 };
-
-// Approve investment
 const approveInvestment = async (req, res) => {
     try {
         const { approvalId } = req.params;
-        const pending = pendingInvestments.get(approvalId);
-        if (!pending) return res.status(404).json({ error: 'Approval request not found' });
+        const { admin } = req.query; // Admin email approving the request
 
-        const { investmentId, userId, amount } = pending;
-        const investment = await Investment.findById(investmentId);
-        if (!investment) return res.status(404).json({ error: 'Investment not found' });
-
-        // Check if the user is already an investor
-        const existingInvestor = investment.investors.find(i => i.userId.toString() === userId);
-        if (existingInvestor) {
-            existingInvestor.amount += amount;
-        } else {
-            investment.investors.push({ userId, amount, profit: investment.expectedProfit });
+        if (!pendingInvestments.has(approvalId)) {
+            return res.status(400).json({ error: "Invalid or expired approval request" });
         }
 
-        investment.totalInvestment += amount;
+        const investmentData = pendingInvestments.get(approvalId);
 
-        await investment.save();
-        await Payment.findOneAndUpdate(
-            { investmentId, userId, amount, status: 'pending', type: 'investment' },
-            { status: 'approved' }
-        );
-        pendingInvestments.delete(approvalId);
+        // Ensure admin has not already approved
+        if (investmentData.approvedBy.has(admin)) {
+            return res.status(400).json({ error: "Admin has already approved this request" });
+        }
 
-        res.status(200).json({ message: 'Investment approved successfully' });
-    } catch (err) {
-        console.error('Error approving investment:', err);
-        res.status(500).json({ error: 'Unable to approve investment' });
+        // Add admin to approval set
+        investmentData.approvedBy.add(admin);
+
+        console.log(`Admin ${admin} approved. Total approvals: ${investmentData.approvedBy.size}`);
+
+        // Check if both admins have approved
+        if (investmentData.approvedBy.size >= 2) {
+            console.log("Investment approved by both admins:", investmentData);
+
+            // Process Investment Approval
+            const { investmentId, userId, amount } = investmentData;
+            const investment = await Investment.findById(investmentId);
+            if (!investment) return res.status(404).json({ error: "Investment not found" });
+
+            // Check if user is already an investor
+            let existingInvestor = investment.investors.find(i => i.userId.toString() === userId);
+            if (existingInvestor) {
+                existingInvestor.amount += amount;
+            } else {
+                investment.investors.push({
+                    userId,
+                    amount,
+                    profit: (amount / (investment.totalInvestment + amount)) * 100, // Dynamic profit
+                });
+            }
+
+            // Update total investment
+            investment.totalInvestment += amount;
+            await investment.save();
+
+            // Update payment status
+            const paymentUpdate = await Payment.findOneAndUpdate(
+                { investmentId, userId, amount, status: "pending", type: "investment" },
+                { status: "approved" },
+                { new: true }
+            );
+
+            if (!paymentUpdate) {
+                return res.status(400).json({ error: "Pending payment record not found" });
+            }
+
+            // Remove from pending approvals
+            pendingInvestments.delete(approvalId);
+
+            return res.status(200).json({ message: "Investment approved successfully!", investment });
+        }
+
+        res.status(200).json({ message: "Approval recorded. Waiting for second admin." });
+
+    } catch (error) {
+        console.error("Error approving investment:", error);
+        res.status(500).json({ error: "Unable to approve investment" });
     }
 };
 
-// Reject investment
+
 const rejectInvestment = async (req, res) => {
     try {
         const { approvalId } = req.params;
+        const { admin } = req.query; // Identify which admin rejected
+
         if (!pendingInvestments.has(approvalId)) {
-            return res.status(404).json({ error: 'Approval request not found' });
+            return res.status(404).json({ error: "Approval request not found or already processed" });
         }
-        pendingInvestments.delete(approvalId);
-        res.status(200).json({ message: 'Investment request rejected' });
+
+        const investmentData = pendingInvestments.get(approvalId);
+
+        // Ensure admin has not already rejected
+        if (investmentData.rejectedBy && investmentData.rejectedBy.has(admin)) {
+            return res.status(400).json({ error: "Admin has already rejected this request" });
+        }
+
+        // Initialize rejection set if not already present
+        if (!investmentData.rejectedBy) {
+            investmentData.rejectedBy = new Set();
+        }
+
+        // Add admin to rejected set
+        investmentData.rejectedBy.add(admin);
+
+        console.log(`Admin ${admin} rejected. Total rejections: ${investmentData.rejectedBy.size}`);
+
+        // If both admins reject, remove the request
+        if (investmentData.rejectedBy.size >= 2) {
+            console.log("Investment rejected by both admins:", investmentData);
+            pendingInvestments.delete(approvalId);
+            return res.status(200).json({ message: "Investment request fully rejected and removed." });
+        }
+
+        res.status(200).json({ message: "Rejection recorded. Waiting for second admin." });
+
     } catch (err) {
-        console.error('Error rejecting investment:', err);
-        res.status(500).json({ error: 'Unable to reject investment' });
+        console.error("Error rejecting investment:", err);
+        res.status(500).json({ error: "Unable to reject investment" });
     }
 };
+
 const deleteInvestment = async (req, res) => {
     try {
         const { id } = req.params;
@@ -428,7 +554,6 @@ const updateInvestmentById = async (req, res) => {
         res.status(500).json({ message: "Error updating investment", error: error.message });
     }
 };
-
 const updateInvestment = async (req, res) => {
     try {
         const { id } = req.params;
@@ -443,25 +568,25 @@ const updateInvestment = async (req, res) => {
             return res.status(404).json({ error: "Investment not found" });
         }
 
-        // Update sellingPrice and sellingQuantity if provided
+        // Update fields if provided
         if (updates.sellingPrice !== undefined) {
             investment.sellingPrice = updates.sellingPrice;
         }
         if (updates.sellingQuantity !== undefined) {
             investment.sellingQuantity = updates.sellingQuantity;
         }
-
-        // Update costPrice and costQuantity if provided
         if (updates.costPrice !== undefined) {
             investment.costPrice = updates.costPrice;
         }
         if (updates.costQuantity !== undefined) {
             investment.costQuantity = updates.costQuantity;
         }
+        if (updates.companyMargin !== undefined) {
+            investment.companyMargin = updates.companyMargin;
+        }
 
-        // Calculate cost per unit only if costQuantity is greater than zero
         let costPerUnit = 0;
-        if (investment.costQuantity > 0) {
+        if (investment.costQuantity >= 0) {
             costPerUnit = investment.costPrice / investment.costQuantity;
         }
 
@@ -476,7 +601,7 @@ const updateInvestment = async (req, res) => {
 
         // Update profit for investors
         investment.investors.forEach(investor => {
-            const newProfit = ((investment.sellingPrice - costPerUnit * investment.sellingQuantity) * investor.profit) / 100;
+            const newProfit = (((investment.sellingPrice - costPerUnit * investment.sellingQuantity)-investment.companyMargin) * investor.profit) / 100;
             investor.profitAmount += newProfit;
         });
 
@@ -488,7 +613,6 @@ const updateInvestment = async (req, res) => {
         res.status(500).json({ error: "Unable to update investment" });
     }
 };
-
 const uploadInvestmentImages = async (req, res) => {
     try {
         const { id } = req.params;

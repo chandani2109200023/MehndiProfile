@@ -28,6 +28,14 @@ const userSchema = new mongoose.Schema({
     unique: true,
     match: [/^\d{10}$/, 'Please provide a valid 10-digit phone number'],
   },
+  loginOtpHash: {
+    type: String,
+    default: null, // For login OTP
+  },
+  loginOtpExpiry: {
+    type: Date,
+    default: null, // Expiry time for login OTP
+  },
   otpHash: {
     type: String,
     default: null, // Initially null, will be set when an OTP is generated
