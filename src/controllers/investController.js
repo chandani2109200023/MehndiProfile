@@ -44,7 +44,7 @@ const sendApprovalEmail = async (investmentId, userId, amount) => {
         const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/approve/${approvalId}?admin=${adminEmail}`;
         const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/reject/${approvalId}?admin=${adminEmail}`;
 
-        adminEmails.forEach(async (adminEmail) => {
+        for (const adminEmail of adminEmails) {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: adminEmail,
@@ -74,7 +74,7 @@ const sendApprovalEmail = async (investmentId, userId, amount) => {
 
             const info = await transporter.sendMail(mailOptions);
             console.log(`Approval email sent to ${adminEmail}:`, info.response);
-        });
+        };
 
     } catch (error) {
         console.error("Error sending approval email:", error);
@@ -323,28 +323,34 @@ const updateInvestorProfit = async (req, res) => {
 // Create new investment
 const createInvestment = async (req, res) => {
     try {
-        const {
-            material,
-            description
-        } = req.body;
+        const { material, description } = req.body;
+
+        // Ensure required fields are provided
+        if (!material) {
+            return res.status(400).json({ error: "Material is required" });
+        }
 
         const investment = new Investment({
             material,
             description: description || "",
             totalInvestment: 0,
-            costPrice:0,
-            costQuantity:0,
+            costPrice: 0,
+            costQuantity: 0,
             sellingPrice: 0,
             sellingQuantity: 0,
             investors: [],
-            status: 'open',
+            status: "open",
         });
 
         const savedInvestment = await investment.save();
-        res.status(201).json(savedInvestment);
+        res.status(201).json({ 
+            message: "Investment created successfully!", 
+            investment: savedInvestment 
+        });
+
     } catch (err) {
-        console.error('Error creating investment:', err);
-        res.status(500).json({ error: 'Unable to create investment' });
+        console.error("Error creating investment:", err);
+        res.status(500).json({ error: "Unable to create investment" });
     }
 };
 
