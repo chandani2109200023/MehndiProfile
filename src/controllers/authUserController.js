@@ -426,5 +426,4 @@ module.exports = {
   verifyOtp,
   resetPassword,
   sendLoginOTP,
-  verifyLoginOTP
 };
