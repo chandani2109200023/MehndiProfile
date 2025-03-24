@@ -601,10 +601,6 @@ const updateInvestment = async (req, res) => {
             return res.status(400).json({ error: "Selling quantity cannot exceed available cost quantity" });
         }
 
-        // Reduce costPrice and costQuantity based on sellingQuantity
-        investment.costPrice -= costPerUnit * investment.sellingQuantity;
-        investment.costQuantity -= investment.sellingQuantity;
-
         // Update profit for investors
         investment.investors.forEach(investor => {
             const newProfit = (((investment.sellingPrice - costPerUnit * investment.sellingQuantity)-investment.companyMargin) * investor.profit) / 100;
