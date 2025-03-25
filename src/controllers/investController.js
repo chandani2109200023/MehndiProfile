@@ -201,6 +201,7 @@ const approveWithdrawal = async (req, res) => {
             // **Step 3: Deduct remaining amount from investor.amount**
             if (remainingAmount > 0) {
                 investor.amount -= remainingAmount;
+                investment.totalInvestment = Math.max(0, investment.totalInvestment - remainingAmount);
             }
 
             // **Step 4: Update investor's totalAmount**
@@ -210,9 +211,6 @@ const approveWithdrawal = async (req, res) => {
             if (investor.amount === 0 && investor.profitAmount === 0) {
                 investment.investors.splice(investorIndex, 1);
             }
-
-            // **Step 6: Update investment's totalInvestment**
-            investment.totalInvestment = Math.max(0, investment.totalInvestment - amount);
 
             await investment.save();
 
