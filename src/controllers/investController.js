@@ -286,8 +286,8 @@ const requestWithdrawal = async (req, res) => {
         const investor = investment.investors.find(i => i.userId.toString() === userId);
         if (!investor) return res.status(404).json({ error: "Investor not found in this investment" });
 
-        if (amount > investor.amount) {
-            return res.status(400).json({ error: "Withdrawal amount exceeds invested amount" });
+        if (amount > investor.totalAmount) {
+            return res.status(400).json({ error: "Withdrawal amount exceeds Total amount" });
         }
 
         await Payment.create({
