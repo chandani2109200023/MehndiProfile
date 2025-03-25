@@ -112,7 +112,7 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
         const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/${withdrawId}?admin=${adminEmail}`;
         const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/reject/${withdrawId}?admin=${adminEmail}`;
 
-        adminEmails.forEach(async (adminEmail) => {
+        for (const adminEmail of adminEmails) {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: adminEmail,
@@ -142,7 +142,7 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
 
             const info = await transporter.sendMail(mailOptions);
             console.log(`Approval email sent to ${adminEmail}:`, info.response);
-        });
+        };
 
     } catch (error) {
         console.error("Error sending approval email:", error);
