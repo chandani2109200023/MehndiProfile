@@ -109,8 +109,8 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
             "h.18.chandanikumaei@gmail.com"
         ];
 
-        const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/approve/${withdrawId}?admin=${adminEmail}`;
-        const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/reject/${withdrawId}?admin=${adminEmail}`;
+        const approveLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/withdraw/${withdrawId}?admin=${adminEmail}`;
+        const rejectLink = (adminEmail) => `https://mehndiprofile.onrender.com/investment/reject/${withdrawId}?admin=${adminEmail}`;
 
         adminEmails.forEach(async (adminEmail) => {
             const mailOptions = {
