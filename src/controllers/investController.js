@@ -185,7 +185,7 @@ const approveWithdrawal = async (req, res) => {
             investor.profitAmount = investor.profitAmount || 0;
 
             // **Step 1: Check if withdrawal amount exceeds total available funds (profit + investment)**
-            const totalAvailable = investor.profitAmount + investor.amount;
+            const totalAvailable = investor.totalAmount;
             if (amount > totalAvailable) {
                 return res.status(400).json({ error: "Withdrawal amount exceeds total available funds (profit + investment)" });
             }
@@ -205,6 +205,8 @@ const approveWithdrawal = async (req, res) => {
             // **Step 3: Deduct remaining amount from investor amount**
             if (remainingAmount > 0) {
                 investor.amount -= remainingAmount;
+                investment.totalInvestment -= remainingAmount;
+                await investment.save();
             }
 
             // **Step 4: Remove investor if they withdraw all their funds**
@@ -212,13 +214,12 @@ const approveWithdrawal = async (req, res) => {
                 investment.investors.splice(investorIndex, 1);
             }
 
-            investment.totalInvestment -= amount;
-            await investment.save();
 
-            const paymentUpdate=await Payment.findOneAndUpdate(
+
+            const paymentUpdate = await Payment.findOneAndUpdate(
                 { investmentId, userId, amount, status: "pending", type: "withdrawal" },
                 { status: "approved" },
-                {new:true}
+                { new: true }
             );
             if (!paymentUpdate) {
                 return res.status(400).json({ error: "Pending payment record not found" });
@@ -294,14 +295,14 @@ const requestWithdrawal = async (req, res) => {
             return res.status(400).json({ error: "Withdrawal amount exceeds Total amount" });
         }
 
-        const payment=new Payment({
+        const payment = new Payment({
             investmentId,
             userId,
             amount,
             status: "pending",
             type: "withdrawal",
         });
-await payment.save();
+        await payment.save();
 
         sendWithdrawalEmail(investmentId, userId, amount);
         res.status(200).json({ message: "Withdrawal request sent for approval" });
