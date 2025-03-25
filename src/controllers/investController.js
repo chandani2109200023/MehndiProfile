@@ -100,8 +100,7 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
             investmentId,
             userId,
             amount,
-            approvedBy: new Set(),
-            rejectedBy: new Set()
+            approvedBy: new Set()
         });
 
         const adminEmails = [
