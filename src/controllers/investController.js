@@ -295,14 +295,14 @@ const requestWithdrawal = async (req, res) => {
             return res.status(400).json({ error: "Withdrawal amount exceeds Total amount" });
         }
 
-        await Payment.create({
+        const payment=new Payment({
             investmentId,
             userId,
             amount,
             status: "pending",
             type: "withdrawal",
-            createdAt: new Date()
         });
+await payment.save();
 
         sendWithdrawalEmail(investmentId, userId, amount);
         res.status(200).json({ message: "Withdrawal request sent for approval" });
@@ -311,6 +311,7 @@ const requestWithdrawal = async (req, res) => {
         res.status(500).json({ error: "Unable to process withdrawal request" });
     }
 };
+
 
 const updateInvestorProfit = async (req, res) => {
     try {

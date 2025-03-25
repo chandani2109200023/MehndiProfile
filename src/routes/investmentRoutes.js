@@ -41,7 +41,7 @@ router.get('/reject/:approvalId', rejectInvestment);
 router.put('/:id',authAdmin,updateInvestment);
 router.patch('/:id',authAdmin,updateInvestment);
 router.patch("/:investmentId/investor/:investorId",authAdmin, updateInvestorProfit);
-router.post('/withdraw',authUser,requestWithdrawal);
+router.post('/withdraw',requestWithdrawal);
 router.get('/withdraw/:withdrawId',approveWithdrawal);
 router.get('/reject/:withdrawId',rejectWithdrawal);
 router.patch('/investment/:id',authAdmin ,updateInvestmentById);  // Route for updating an investment
