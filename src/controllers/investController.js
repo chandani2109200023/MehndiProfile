@@ -171,6 +171,7 @@ const approveWithdrawal = async (req, res) => {
 
         // If two approvals are given, process the withdrawal
         if (withdrawal.approvedBy.size >= 2) {
+            console.log("Withdrawal approved by both admins:", withdrawal);
             const { investmentId, userId, amount } = withdrawal;
 
             const investment = await Investment.findById(investmentId);
@@ -215,10 +216,14 @@ const approveWithdrawal = async (req, res) => {
             investment.totalInvestment -= amount;
             await investment.save();
 
-            await Payment.findOneAndUpdate(
+            const paymentUpdate=await Payment.findOneAndUpdate(
                 { investmentId, userId, amount, status: "pending", type: "withdrawal" },
-                { status: "approved" }
+                { status: "approved" },
+                {new:true}
             );
+            if (!paymentUpdate) {
+                return res.status(400).json({ error: "Pending payment record not found" });
+            }
 
             pendingWithdrawals.delete(withdrawId);
             console.log("Withdrawal approved and processed.");
