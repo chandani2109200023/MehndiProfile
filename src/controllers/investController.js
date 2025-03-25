@@ -148,7 +148,6 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
     }
 };
 
-
 const approveWithdrawal = async (req, res) => {
     try {
         const { withdrawId } = req.params;
@@ -181,41 +180,43 @@ const approveWithdrawal = async (req, res) => {
 
             const investor = investment.investors[investorIndex];
 
-            // Ensure profitAmount field exists (if using default 0)
+            // Ensure profitAmount exists
             investor.profitAmount = investor.profitAmount || 0;
 
-            // **Step 1: Check if withdrawal amount exceeds total available funds (profit + investment)**
-            const totalAvailable = investor.totalAmount;
-            if (amount > totalAvailable) {
-                return res.status(400).json({ error: "Withdrawal amount exceeds total available funds (profit + investment)" });
+            // **Step 1: Check total available funds**
+            if (amount > investor.totalAmount) {
+                return res.status(400).json({ error: "Withdrawal amount exceeds available funds (profit + investment)" });
             }
 
             // **Step 2: Deduct from profitAmount first**
             let remainingAmount = amount;
-            if (investor.profitAmount > 0) {
-                if (remainingAmount <= investor.profitAmount) {
-                    investor.profitAmount -= remainingAmount;
-                    remainingAmount = 0;
-                } else {
-                    remainingAmount -= investor.profitAmount;
-                    investor.profitAmount = 0;
-                }
+            if (remainingAmount > investor.profitAmount) {
+                remainingAmount -= investor.profitAmount;
+                investor.profitAmount = 0;  // Set profitAmount to 0 after using it
+            } else {
+                investor.profitAmount -= remainingAmount;
+                remainingAmount = 0;
             }
 
-            // **Step 3: Deduct remaining amount from investor amount**
+            // **Step 3: Deduct remaining amount from investor.amount**
             if (remainingAmount > 0) {
                 investor.amount -= remainingAmount;
-                investment.totalInvestment -= remainingAmount;
-                await investment.save();
             }
 
-            // **Step 4: Remove investor if they withdraw all their funds**
+            // **Step 4: Update investor's totalAmount**
+            investor.totalAmount -= amount;
+
+            // **Step 5: Remove investor if they withdraw all their funds**
             if (investor.amount === 0 && investor.profitAmount === 0) {
                 investment.investors.splice(investorIndex, 1);
             }
 
+            // **Step 6: Update investment's totalInvestment**
+            investment.totalInvestment = Math.max(0, investment.totalInvestment - amount);
 
+            await investment.save();
 
+            // **Step 7: Update the payment record**
             const paymentUpdate = await Payment.findOneAndUpdate(
                 { investmentId, userId, amount, status: "pending", type: "withdrawal" },
                 { status: "approved" },
