@@ -3,7 +3,7 @@ const Investment = require('../models/investment');
 const User = require('../models/User'); // Adjust path based on your project structure
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
-const Payment=require('../models/Payments');
+const Payment = require('../models/Payments');
 
 const pendingInvestments = new Map();
 const pendingWithdrawals = new Map();
@@ -96,12 +96,12 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
         }
 
         const withdrawId = uuidv4();
-        pendingWithdrawals.set(withdrawId, { 
-            investmentId, 
-            userId, 
-            amount, 
-            approvedBy: new Set(), 
-            rejectedBy: new Set() 
+        pendingWithdrawals.set(withdrawId, {
+            investmentId,
+            userId,
+            amount,
+            approvedBy: new Set(),
+            rejectedBy: new Set()
         });
 
         const adminEmails = [
@@ -150,7 +150,6 @@ const sendWithdrawalEmail = async (investmentId, userId, amount) => {
 };
 
 
-// Approve Withdrawal (Requires Two Admins)
 const approveWithdrawal = async (req, res) => {
     try {
         const { withdrawId } = req.params;
@@ -182,10 +181,35 @@ const approveWithdrawal = async (req, res) => {
 
             const investor = investment.investors[investorIndex];
 
-            if (amount >= investor.amount) {
+            // Ensure profitAmount field exists (if using default 0)
+            investor.profitAmount = investor.profitAmount || 0;
+
+            // **Step 1: Check if withdrawal amount exceeds total available funds (profit + investment)**
+            const totalAvailable = investor.profitAmount + investor.amount;
+            if (amount > totalAvailable) {
+                return res.status(400).json({ error: "Withdrawal amount exceeds total available funds (profit + investment)" });
+            }
+
+            // **Step 2: Deduct from profitAmount first**
+            let remainingAmount = amount;
+            if (investor.profitAmount > 0) {
+                if (remainingAmount <= investor.profitAmount) {
+                    investor.profitAmount -= remainingAmount;
+                    remainingAmount = 0;
+                } else {
+                    remainingAmount -= investor.profitAmount;
+                    investor.profitAmount = 0;
+                }
+            }
+
+            // **Step 3: Deduct remaining amount from investor amount**
+            if (remainingAmount > 0) {
+                investor.amount -= remainingAmount;
+            }
+
+            // **Step 4: Remove investor if they withdraw all their funds**
+            if (investor.amount === 0 && investor.profitAmount === 0) {
                 investment.investors.splice(investorIndex, 1);
-            } else {
-                investor.amount -= amount;
             }
 
             investment.totalInvestment -= amount;
@@ -343,9 +367,9 @@ const createInvestment = async (req, res) => {
         });
 
         const savedInvestment = await investment.save();
-        res.status(201).json({ 
-            message: "Investment created successfully!", 
-            investment: savedInvestment 
+        res.status(201).json({
+            message: "Investment created successfully!",
+            investment: savedInvestment
         });
 
     } catch (err) {
@@ -596,7 +620,7 @@ const updateInvestment = async (req, res) => {
 
         // Update profit for investors
         investment.investors.forEach(investor => {
-            const newProfit = (((investment.sellingPrice - investment.costPrice)-investment.companyMargin) * investor.profit) / 100;
+            const newProfit = (((investment.sellingPrice - investment.costPrice) - investment.companyMargin) * investor.profit) / 100;
             investor.profitAmount += newProfit;
         });
 
